@@ -1,10 +1,10 @@
-import { Constructor, Mixin, mix, configure } from '../src/mixwith'
+import { Constructor, type MixinType, mix, _originalMixin, _mixinRef, Mixin, hasMixin } from '../src/mixwith'
 
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 // <TIMESTAMP>
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-const timestamp = <T extends Constructor>(superclass: T, config = {}) => {
+const timestamp = <T extends Constructor>(superclass: T) => {
   class Timestamp extends superclass {
     private _timestamp: number
     
@@ -26,21 +26,19 @@ const timestamp = <T extends Constructor>(superclass: T, config = {}) => {
 
 const TimestampMixin = Mixin(timestamp)
 
-interface TimestampInterface extends Mixin<typeof TimestampMixin> {}
+type TimestampInterface = MixinType<typeof TimestampMixin>
 
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 // <CONFIGURE>
 // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-const configurable = <T extends Constructor>(superclass: T, config: Record<string, any> = {}) => {
+const configurable = <T extends Constructor>(superclass: T) => {
   class Configure extends superclass {
-    configure (localConf: Record<string, any> = {}) {
-      const combined = {...config, ...localConf}
-      for (let key in combined) {
-        if (Object.getOwnPropertyDescriptor(this, key) || this[key]) {
-          this[key] = combined[key]
-        }
-      }
+    configure(config?: unknown) {
+      if (!config) return
+      if (typeof config !== 'object') throw new Error("Config must be object");
+      
+      Object.assign(this, config)
     }
   }
   return Configure
@@ -48,67 +46,86 @@ const configurable = <T extends Constructor>(superclass: T, config: Record<strin
 
 const ConfigureMixin = Mixin(configurable)
 
-interface ConfigureInterface extends Mixin<typeof ConfigureMixin> {}
+type ConfigureInterface = MixinType<typeof ConfigureMixin>
 
-interface CommentInterface extends TimestampInterface, ConfigureInterface {}
+// -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+// <COMMENT MODEL>
+// -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 
-class Comment extends mix(class {}).with(configure(ConfigureMixin, { message: 'Some comment' }), TimestampMixin) implements CommentInterface {
+type CommentConfig = {message?: string, timestamp?: number}
+
+type CommentInterface = TimestampInterface & ConfigureInterface & {
+  configure(config: CommentConfig): void
+}
+
+class Comment extends mix(class {}).with(ConfigureMixin, TimestampMixin) implements CommentInterface {
   constructor (public message: string = '') {
     super()
   }
+  configure(config: CommentConfig) {
+    super.configure(config)
+  }
 }
-
-class SuperComment extends 
-  mix(Comment).with(
-    configure(ConfigureMixin, { message: 'Another comment' }) // <--- It shouldn't be redefined
-  ) { }
 
 /**
  * Mixin test
  */
 describe("Mixin test", () => {
   const comment = new Comment()
-  comment.configure({ timestamp: 0 })
-
-  const superComment = new SuperComment()
-  superComment.configure()
+  comment.configure({ timestamp: 0, message: 'Some comment' })
   
   it("Should be instance of Comment", () => {
     expect(comment).toBeInstanceOf(Comment)
-  })
-  
-  it("Shouldn't be instance of SuperComment", () => {
-    expect(comment instanceof SuperComment).toBeFalsy()
+    expect(comment instanceof Comment).toEqual(true)
   })
 
   it("Should be instance of TimestampMixin", () => {
     expect(comment).toBeInstanceOf(TimestampMixin)
+    expect(comment instanceof TimestampMixin).toEqual(true)
   })
 
   it("Should be instance of ConfigureMixin", () => {
     expect(comment).toBeInstanceOf(ConfigureMixin)
+    expect(comment instanceof ConfigureMixin).toEqual(true)
   })
 
   it("Should be configurable mixin", () => {
     expect(comment.message).toEqual('Some comment')
     expect(comment.timestamp).toEqual(0)
   })
-  
-  it("Should be instance of SuperComment", () => {
-    expect(superComment).toBeInstanceOf(SuperComment)
+
+  it("Shouldn't duplicate mixins", () => {
+    class TestDup extends mix(Comment).with(TimestampMixin, TimestampMixin, TimestampMixin, TimestampMixin, TimestampMixin, TimestampMixin) {}
+    let count = 0
+    let prototype = TestDup.prototype
+    while (prototype) {
+      if (Object.getOwnPropertyDescriptor(prototype, _mixinRef)?.value === timestamp) count++
+      prototype = Object.getPrototypeOf(prototype)
+    }
+    expect(count).toEqual(1)
   })
 
-  it("Should be instance of TimestampMixin", () => {
-    expect(superComment).toBeInstanceOf(TimestampMixin)
+  it("Should cache", () => {
+    class Base {}
+    expect(mix(Base).with(TimestampMixin)).toEqual(mix(Base).with(TimestampMixin))
   })
 
-  it("Should be instance of ConfigureMixin", () => {
-    expect(superComment).toBeInstanceOf(ConfigureMixin)
+  it("Should add @@hasInstance", () => {
+    const TestMixin = Mixin(<T extends Constructor>(superclass: T) => class extends superclass { prop1 = '' })
+    ;(new class extends mix(class {}).with(TestMixin) {}).prop1
+    expect(Symbol.hasInstance in TestMixin).toEqual(true)
   })
 
-  it("Should be configurable mixin", () => {
-    expect(superComment.message).toEqual('Some comment')
-    expect(superComment.timestamp).toBeLessThanOrEqual(Date.now())
+  it("Shouldn't overload @@hasInstance", () => {
+    function mixinWithHasInstance<T extends Constructor>(superclass: T) { return class extends superclass {} }
+    Object.defineProperty(mixinWithHasInstance, Symbol.hasInstance, {
+      value: function (value: unknown) {
+        return hasMixin(value, this)
+      }
+    })
+    const MixinWithHasInstance = Mixin(mixinWithHasInstance)
+    class TestHasinstance extends mix(class {}).with(MixinWithHasInstance) {}
+    expect(new TestHasinstance()).toBeInstanceOf(MixinWithHasInstance)
   })
 
 })

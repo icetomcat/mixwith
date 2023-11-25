@@ -14,20 +14,14 @@
    * This is needed in order to implement @@hasInstance as a decorator function.
    */
   const wrap = (mixin, wrapper) => {
-      Object.setPrototypeOf(wrapper, mixin);
-      if (!mixin[_originalMixin]) {
-          Object.defineProperty(mixin, _originalMixin, {
-              value: mixin,
-          });
-      }
-      return wrapper;
+      return Object.setPrototypeOf(wrapper, mixin);
   };
   /**
    * Decorates mixin so that it caches its applications. When applied multiple
    * times to the same superclass, mixin will only create one subclass and
    * memoize it.
    */
-  const Cached = (mixin) => wrap(mixin, (superclass, ...args) => {
+  const Cached = (mixin) => wrap(mixin, function (superclass) {
       // Get or create a symbol used to look up a previous application of mixin
       // to the class. This symbol is unique per mixin definition, so a class will have N
       // applicationRefs if it has had N mixins applied to it. A mixin will have
@@ -37,13 +31,13 @@
           applicationRef = mixin[_cachedApplicationRef] = Symbol(mixin.name);
       }
       // Look up an existing application of `mixin` to `c`, return it if found.
-      if (({}).hasOwnProperty.call(superclass, applicationRef)) {
+      if (Object.hasOwn(superclass, applicationRef)) {
           return superclass[applicationRef];
       }
       // Apply the mixin
-      const application = mixin(superclass, ...args);
+      const application = mixin(superclass);
       // Cache the mixin application on the superclass
-      superclass[applicationRef] = application;
+      Object.defineProperty(superclass, applicationRef, { value: application });
       return application;
   });
   /**
@@ -66,11 +60,11 @@
    * Note: @@hasInstance is not supported in any browsers yet.
    */
   const HasInstance = (mixin) => {
-      if (Symbol.hasInstance && !({}).hasOwnProperty.call(mixin, Symbol.hasInstance)) {
-          Object.defineProperty(mixin, Symbol.hasInstance, {
+      if (!Object.hasOwn(mixin[_originalMixin], Symbol.hasInstance)) {
+          Object.defineProperty(mixin[_originalMixin], Symbol.hasInstance, {
               value: function (o) {
                   return hasMixin(o, mixin);
-              },
+              }
           });
       }
       return mixin;
@@ -78,24 +72,25 @@
   /**
    * Decorates `mixin` so that it only applies if it's not already on the prototype chain.
    */
-  const DeDupe = (mixin) => wrap(mixin, (superclass, ...args) => hasMixin(superclass.prototype, mixin) ? superclass : mixin(superclass, ...args));
+  const DeDupe = (mixin) => wrap(mixin, function (superclass) {
+      return hasMixin(superclass.prototype, mixin) ? superclass : mixin(superclass);
+  });
   /**
    * A basic mixin decorator that sets up a reference from mixin applications
    * to the mixin definition for use by other mixin decorators.
    */
-  const BareMixin = (mixin) => wrap(mixin, (superclass, ...args) => {
+  const BareMixin = (mixin) => wrap(mixin, function (superclass) {
       // Apply the mixin
-      const application = mixin(superclass, ...args);
+      const application = mixin(superclass);
       // Attach a reference from mixin application to wrapped mixin for RTTI
       // mixin[@@hasInstance] should use this.
       application.prototype[_mixinRef] = mixin[_originalMixin];
       return application;
   });
   /**
-   *
-   * @param mixin
+   * @param {T} mixin
    */
-  const Mixin = (mixin) => DeDupe(Cached(HasInstance(BareMixin(mixin))));
+  const Mixin = (mixin) => Cached(DeDupe(HasInstance(BareMixin(Object.assign(mixin, { [_originalMixin]: mixin })))));
   class MixinBuilder {
       constructor(superclass) {
           this.superclass = superclass;
@@ -104,18 +99,31 @@
           return Array.from(args).reduce((c, m) => m(c), this.superclass);
       }
   }
-  const configure = (mixin, ...args) => wrap(mixin, (superclass) => mixin(superclass, ...args));
-  const mix = (superClass) => new MixinBuilder(superClass);
+  /**
+   *
+   * @param superclass
+   * @returns
+   * @example
+   * class Base {}
+   *
+   * const Mixin1 = Mixin(<T extends Constructor>(superclass: T) => class extends superclass { name = "" })
+   * const Mixin2 = Mixin(<T extends Constructor>(superclass: T) => class extends superclass { id = "" })
+   *
+   * class MyClass extends mix(Base).with(Mixin1, Mixin2) {}
+   *
+   * console.log(new MyClass()) // MyClass { name: '', id: '' }
+   */
+  const mix = (superclass) => new MixinBuilder(superclass);
 
   exports.BareMixin = BareMixin;
   exports.Cached = Cached;
   exports.DeDupe = DeDupe;
   exports.HasInstance = HasInstance;
   exports.Mixin = Mixin;
+  exports.MixinBuilder = MixinBuilder;
   exports._cachedApplicationRef = _cachedApplicationRef;
   exports._mixinRef = _mixinRef;
   exports._originalMixin = _originalMixin;
-  exports.configure = configure;
   exports.hasMixin = hasMixin;
   exports.mix = mix;
   exports.wrap = wrap;

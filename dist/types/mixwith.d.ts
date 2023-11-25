@@ -1,79 +1,72 @@
-export declare type Function<A = any> = (...args: any[]) => A;
-export declare type Constructor<A = any> = new (...args: any[]) => A;
-export declare type Mixin<T extends Function<any>> = InstanceType<ReturnType<T>>;
-export declare type MixinParameters<T extends (...args: any) => any> = T extends (superclass: any, ...args: infer P) => any ? P : never;
+export type Function<A = any> = (...args: any[]) => A;
+export type Constructor<A = {}> = new (...args: any[]) => A;
+export type MixinType<T extends Function> = InstanceType<ReturnType<T>>;
+export type MixinParameters<T extends (...args: any) => any> = T extends (superclass: any, ...args: infer P) => any ? P : never;
+export type MixWith<T extends Constructor, U extends Function[]> = U extends [infer A extends Function, ...infer B extends Function[]] ? T & MixWith<ReturnType<A>, B> : T;
 export declare const _cachedApplicationRef: unique symbol;
 export declare const _mixinRef: unique symbol;
 export declare const _originalMixin: unique symbol;
+type WithOriginal = Function & {
+    [_originalMixin]: Function;
+};
 /**
  * Sets the prototype of mixin to wrapper so that properties set on mixin are
  * inherited by the wrapper.
  *
  * This is needed in order to implement @@hasInstance as a decorator function.
  */
-export declare const wrap: <T>(mixin: any, wrapper: Function<T>) => any;
+export declare const wrap: <T extends WithOriginal>(mixin: T, wrapper: Function) => T;
 /**
  * Decorates mixin so that it caches its applications. When applied multiple
  * times to the same superclass, mixin will only create one subclass and
  * memoize it.
  */
-export declare const Cached: <T>(mixin: any) => T;
+export declare const Cached: <TMixin extends WithOriginal, TSuperclass extends Constructor<{}>>(mixin: TMixin & {
+    [_cachedApplicationRef]?: keyof TSuperclass | undefined;
+}) => TMixin;
 /**
  * Returns `true` if `o` has an application of `mixin` on its prototype chain.
  *
  * @example
  * hasMixin(superclass.prototype, mixin)
  */
-export declare const hasMixin: <T>(o: any, mixin: any) => boolean;
+export declare const hasMixin: <T extends WithOriginal>(o: any, mixin: T) => boolean;
 /**
  * Adds @@hasInstance (ES2015 instanceof support) to mixin.
  * Note: @@hasInstance is not supported in any browsers yet.
  */
-export declare const HasInstance: <T>(mixin: any) => T;
+export declare const HasInstance: <T extends WithOriginal>(mixin: T) => T;
 /**
  * Decorates `mixin` so that it only applies if it's not already on the prototype chain.
  */
-export declare const DeDupe: <T>(mixin: any) => T;
+export declare const DeDupe: <T extends WithOriginal>(mixin: T) => T;
 /**
  * A basic mixin decorator that sets up a reference from mixin applications
  * to the mixin definition for use by other mixin decorators.
  */
-export declare const BareMixin: <T>(mixin: any) => T;
+export declare const BareMixin: <T extends WithOriginal>(mixin: T) => T;
+/**
+ * @param {T} mixin
+ */
+export declare const Mixin: <T extends Function<any>>(mixin: T) => T;
+export declare class MixinBuilder<TSuperClass extends Constructor> {
+    private readonly superclass;
+    constructor(superclass: TSuperClass);
+    with<A extends Function[]>(...args: A): MixWith<TSuperClass, A>;
+}
 /**
  *
- * @param mixin
+ * @param superclass
+ * @returns
+ * @example
+ * class Base {}
+ *
+ * const Mixin1 = Mixin(<T extends Constructor>(superclass: T) => class extends superclass { name = "" })
+ * const Mixin2 = Mixin(<T extends Constructor>(superclass: T) => class extends superclass { id = "" })
+ *
+ * class MyClass extends mix(Base).with(Mixin1, Mixin2) {}
+ *
+ * console.log(new MyClass()) // MyClass { name: '', id: '' }
  */
-export declare const Mixin: <T>(mixin: T) => T;
-declare class MixinBuilder<TSuperClass extends Constructor> {
-    private superclass;
-    constructor(superclass: TSuperClass);
-    with(): TSuperClass;
-    with<A extends Function>(m1: A): TSuperClass & ReturnType<A>;
-    with<A extends Function, B extends Function>(m1: A, m2: B): TSuperClass & ReturnType<A> & ReturnType<B>;
-    with<A extends Function, B extends Function, C extends Function>(m1: A, m2: B, m3: C): TSuperClass & ReturnType<A> & ReturnType<B> & ReturnType<C>;
-    with<A extends Function, B extends Function, C extends Function, D extends Function>(m1: A, m2: B, m3: C, m4: D): TSuperClass & ReturnType<A> & ReturnType<B> & ReturnType<C> & ReturnType<D>;
-    with<A extends Function, B extends Function, C extends Function, D extends Function, E extends Function>(m1: A, m2: B, m3: C, m4: D, m5: E): TSuperClass & ReturnType<A> & ReturnType<B> & ReturnType<C> & ReturnType<D> & ReturnType<E>;
-    with<A extends Function, B extends Function, C extends Function, D extends Function, E extends Function, F extends Function>(m1: A, m2: B, m3: C, m4: D, m5: E, m6: F): TSuperClass & ReturnType<A> & ReturnType<B> & ReturnType<C> & ReturnType<D> & ReturnType<E> & ReturnType<F>;
-    with<A extends Function, B extends Function, C extends Function, D extends Function, E extends Function, F extends Function, G extends Function>(m1: A, m2: B, m3: C, m4: D, m5: E, m6: F, m7: F): TSuperClass & ReturnType<A> & ReturnType<B> & ReturnType<C> & ReturnType<D> & ReturnType<E> & ReturnType<F> & ReturnType<G>;
-    with<A extends Function, B extends Function, C extends Function, D extends Function, E extends Function, F extends Function, G extends Function, H extends Function>(m1: A, m2: B, m3: C, m4: D, m5: E, m6: F, m7: G, m8: H): TSuperClass & ReturnType<A> & ReturnType<B> & ReturnType<C> & ReturnType<D> & ReturnType<E> & ReturnType<F> & ReturnType<G> & ReturnType<H>;
-    with<A extends Function, B extends Function, C extends Function, D extends Function, E extends Function, F extends Function, G extends Function, H extends Function, I extends Function>(m1: A, m2: B, m3: C, m4: D, m5: E, m6: F, m7: G, m8: H, m9: I): TSuperClass & ReturnType<A> & ReturnType<B> & ReturnType<C> & ReturnType<D> & ReturnType<E> & ReturnType<F> & ReturnType<G> & ReturnType<H> & ReturnType<I>;
-    with<A extends Function, B extends Function, C extends Function, D extends Function, E extends Function, F extends Function, G extends Function, H extends Function, I extends Function, J extends Function>(m1: A, m2: B, m3: C, m4: D, m5: E, m6: F, m7: G, m8: H, m9: I, m10: J): TSuperClass & ReturnType<A> & ReturnType<B> & ReturnType<C> & ReturnType<D> & ReturnType<E> & ReturnType<F> & ReturnType<G> & ReturnType<H> & ReturnType<I> & ReturnType<J>;
-    with<A extends Function, B extends Function, C extends Function, D extends Function, E extends Function, F extends Function, G extends Function, H extends Function, I extends Function, J extends Function, K extends Function>(m1: A, m2: B, m3: C, m4: D, m5: E, m6: F, m7: G, m8: H, m9: I, m10: J, m11: K): TSuperClass & ReturnType<A> & ReturnType<B> & ReturnType<C> & ReturnType<D> & ReturnType<E> & ReturnType<F> & ReturnType<G> & ReturnType<H> & ReturnType<I> & ReturnType<J> & ReturnType<K>;
-    with<A extends Function, B extends Function, C extends Function, D extends Function, E extends Function, F extends Function, G extends Function, H extends Function, I extends Function, J extends Function, K extends Function, L extends Function>(m1: A, m2: B, m3: C, m4: D, m5: E, m6: F, m7: G, m8: H, m9: I, m10: J, m11: K, m12: L): TSuperClass & ReturnType<A> & ReturnType<B> & ReturnType<C> & ReturnType<D> & ReturnType<E> & ReturnType<F> & ReturnType<G> & ReturnType<H> & ReturnType<I> & ReturnType<J> & ReturnType<K> & ReturnType<L>;
-    with<A extends Function, B extends Function, C extends Function, D extends Function, E extends Function, F extends Function, G extends Function, H extends Function, I extends Function, J extends Function, K extends Function, L extends Function, M extends Function>(m1: A, m2: B, m3: C, m4: D, m5: E, m6: F, m7: G, m8: H, m9: I, m10: J, m11: K, m12: L, m13: M): TSuperClass & ReturnType<A> & ReturnType<B> & ReturnType<C> & ReturnType<D> & ReturnType<E> & ReturnType<F> & ReturnType<G> & ReturnType<H> & ReturnType<I> & ReturnType<J> & ReturnType<K> & ReturnType<L> & ReturnType<M>;
-    with<A extends Function, B extends Function, C extends Function, D extends Function, E extends Function, F extends Function, G extends Function, H extends Function, I extends Function, J extends Function, K extends Function, L extends Function, M extends Function, N extends Function>(m1: A, m2: B, m3: C, m4: D, m5: E, m6: F, m7: G, m8: H, m9: I, m10: J, m11: K, m12: L, m13: M, m14: N): TSuperClass & ReturnType<A> & ReturnType<B> & ReturnType<C> & ReturnType<D> & ReturnType<E> & ReturnType<F> & ReturnType<G> & ReturnType<H> & ReturnType<I> & ReturnType<J> & ReturnType<K> & ReturnType<L> & ReturnType<M> & ReturnType<N>;
-    with<A extends Function, B extends Function, C extends Function, D extends Function, E extends Function, F extends Function, G extends Function, H extends Function, I extends Function, J extends Function, K extends Function, L extends Function, M extends Function, N extends Function, O extends Function>(m1: A, m2: B, m3: C, m4: D, m5: E, m6: F, m7: G, m8: H, m9: I, m10: J, m11: K, m12: L, m13: M, m14: N, m15: O): TSuperClass & ReturnType<A> & ReturnType<B> & ReturnType<C> & ReturnType<D> & ReturnType<E> & ReturnType<F> & ReturnType<G> & ReturnType<H> & ReturnType<I> & ReturnType<J> & ReturnType<K> & ReturnType<L> & ReturnType<M> & ReturnType<N> & ReturnType<O>;
-    with<A extends Function, B extends Function, C extends Function, D extends Function, E extends Function, F extends Function, G extends Function, H extends Function, I extends Function, J extends Function, K extends Function, L extends Function, M extends Function, N extends Function, O extends Function, P extends Function>(m1: A, m2: B, m3: C, m4: D, m5: E, m6: F, m7: G, m8: H, m9: I, m10: J, m11: K, m12: L, m13: M, m14: N, m15: O, m16: P): TSuperClass & ReturnType<A> & ReturnType<B> & ReturnType<C> & ReturnType<D> & ReturnType<E> & ReturnType<F> & ReturnType<G> & ReturnType<H> & ReturnType<I> & ReturnType<J> & ReturnType<K> & ReturnType<L> & ReturnType<M> & ReturnType<N> & ReturnType<O> & ReturnType<P>;
-    with<A extends Function, B extends Function, C extends Function, D extends Function, E extends Function, F extends Function, G extends Function, H extends Function, I extends Function, J extends Function, K extends Function, L extends Function, M extends Function, N extends Function, O extends Function, P extends Function, Q extends Function>(m1: A, m2: B, m3: C, m4: D, m5: E, m6: F, m7: G, m8: H, m9: I, m10: J, m11: K, m12: L, m13: M, m14: N, m15: O, m16: P, m17: Q): TSuperClass & ReturnType<A> & ReturnType<B> & ReturnType<C> & ReturnType<D> & ReturnType<E> & ReturnType<F> & ReturnType<G> & ReturnType<H> & ReturnType<I> & ReturnType<J> & ReturnType<K> & ReturnType<L> & ReturnType<M> & ReturnType<N> & ReturnType<O> & ReturnType<P> & ReturnType<Q>;
-    with<A extends Function, B extends Function, C extends Function, D extends Function, E extends Function, F extends Function, G extends Function, H extends Function, I extends Function, J extends Function, K extends Function, L extends Function, M extends Function, N extends Function, O extends Function, P extends Function, Q extends Function, R extends Function>(m1: A, m2: B, m3: C, m4: D, m5: E, m6: F, m7: G, m8: H, m9: I, m10: J, m11: K, m12: L, m13: M, m14: N, m15: O, m16: P, m17: Q, m18: R): TSuperClass & ReturnType<A> & ReturnType<B> & ReturnType<C> & ReturnType<D> & ReturnType<E> & ReturnType<F> & ReturnType<G> & ReturnType<H> & ReturnType<I> & ReturnType<J> & ReturnType<K> & ReturnType<L> & ReturnType<M> & ReturnType<N> & ReturnType<O> & ReturnType<P> & ReturnType<Q> & ReturnType<R>;
-    with<A extends Function, B extends Function, C extends Function, D extends Function, E extends Function, F extends Function, G extends Function, H extends Function, I extends Function, J extends Function, K extends Function, L extends Function, M extends Function, N extends Function, O extends Function, P extends Function, Q extends Function, R extends Function, S extends Function>(m1: A, m2: B, m3: C, m4: D, m5: E, m6: F, m7: G, m8: H, m9: I, m10: J, m11: K, m12: L, m13: M, m14: N, m15: O, m16: P, m17: Q, m18: R, m19: S): TSuperClass & ReturnType<A> & ReturnType<B> & ReturnType<C> & ReturnType<D> & ReturnType<E> & ReturnType<F> & ReturnType<G> & ReturnType<H> & ReturnType<I> & ReturnType<J> & ReturnType<K> & ReturnType<L> & ReturnType<M> & ReturnType<N> & ReturnType<O> & ReturnType<P> & ReturnType<Q> & ReturnType<R> & ReturnType<S>;
-    with<A extends Function, B extends Function, C extends Function, D extends Function, E extends Function, F extends Function, G extends Function, H extends Function, I extends Function, J extends Function, K extends Function, L extends Function, M extends Function, N extends Function, O extends Function, P extends Function, Q extends Function, R extends Function, S extends Function, T extends Function>(m1: A, m2: B, m3: C, m4: D, m5: E, m6: F, m7: G, m8: H, m9: I, m10: J, m11: K, m12: L, m13: M, m14: N, m15: O, m16: P, m17: Q, m18: R, m19: S, m20: T): TSuperClass & ReturnType<A> & ReturnType<B> & ReturnType<C> & ReturnType<D> & ReturnType<E> & ReturnType<F> & ReturnType<G> & ReturnType<H> & ReturnType<I> & ReturnType<J> & ReturnType<K> & ReturnType<L> & ReturnType<M> & ReturnType<N> & ReturnType<O> & ReturnType<P> & ReturnType<Q> & ReturnType<R> & ReturnType<S> & ReturnType<T>;
-    with<A extends Function, B extends Function, C extends Function, D extends Function, E extends Function, F extends Function, G extends Function, H extends Function, I extends Function, J extends Function, K extends Function, L extends Function, M extends Function, N extends Function, O extends Function, P extends Function, Q extends Function, R extends Function, S extends Function, T extends Function, U extends Function>(m1: A, m2: B, m3: C, m4: D, m5: E, m6: F, m7: G, m8: H, m9: I, m10: J, m11: K, m12: L, m13: M, m14: N, m15: O, m16: P, m17: Q, m18: R, m19: S, m20: T, m21: U): TSuperClass & ReturnType<A> & ReturnType<B> & ReturnType<C> & ReturnType<D> & ReturnType<E> & ReturnType<F> & ReturnType<G> & ReturnType<H> & ReturnType<I> & ReturnType<J> & ReturnType<K> & ReturnType<L> & ReturnType<M> & ReturnType<N> & ReturnType<O> & ReturnType<P> & ReturnType<Q> & ReturnType<R> & ReturnType<S> & ReturnType<T> & ReturnType<U>;
-    with<A extends Function, B extends Function, C extends Function, D extends Function, E extends Function, F extends Function, G extends Function, H extends Function, I extends Function, J extends Function, K extends Function, L extends Function, M extends Function, N extends Function, O extends Function, P extends Function, Q extends Function, R extends Function, S extends Function, T extends Function, U extends Function, V extends Function>(m1: A, m2: B, m3: C, m4: D, m5: E, m6: F, m7: G, m8: H, m9: I, m10: J, m11: K, m12: L, m13: M, m14: N, m15: O, m16: P, m17: Q, m18: R, m19: S, m20: T, m21: U, m22: V): TSuperClass & ReturnType<A> & ReturnType<B> & ReturnType<C> & ReturnType<D> & ReturnType<E> & ReturnType<F> & ReturnType<G> & ReturnType<H> & ReturnType<I> & ReturnType<J> & ReturnType<K> & ReturnType<L> & ReturnType<M> & ReturnType<N> & ReturnType<O> & ReturnType<P> & ReturnType<Q> & ReturnType<R> & ReturnType<S> & ReturnType<T> & ReturnType<U> & ReturnType<V>;
-    with<A extends Function, B extends Function, C extends Function, D extends Function, E extends Function, F extends Function, G extends Function, H extends Function, I extends Function, J extends Function, K extends Function, L extends Function, M extends Function, N extends Function, O extends Function, P extends Function, Q extends Function, R extends Function, S extends Function, T extends Function, U extends Function, V extends Function, W extends Function>(m1: A, m2: B, m3: C, m4: D, m5: E, m6: F, m7: G, m8: H, m9: I, m10: J, m11: K, m12: L, m13: M, m14: N, m15: O, m16: P, m17: Q, m18: R, m19: S, m20: T, m21: U, m22: V, m23: W): TSuperClass & ReturnType<A> & ReturnType<B> & ReturnType<C> & ReturnType<D> & ReturnType<E> & ReturnType<F> & ReturnType<G> & ReturnType<H> & ReturnType<I> & ReturnType<J> & ReturnType<K> & ReturnType<L> & ReturnType<M> & ReturnType<N> & ReturnType<O> & ReturnType<P> & ReturnType<Q> & ReturnType<R> & ReturnType<S> & ReturnType<T> & ReturnType<U> & ReturnType<V> & ReturnType<W>;
-    with<A extends Function, B extends Function, C extends Function, D extends Function, E extends Function, F extends Function, G extends Function, H extends Function, I extends Function, J extends Function, K extends Function, L extends Function, M extends Function, N extends Function, O extends Function, P extends Function, Q extends Function, R extends Function, S extends Function, T extends Function, U extends Function, V extends Function, W extends Function, X extends Function>(m1: A, m2: B, m3: C, m4: D, m5: E, m6: F, m7: G, m8: H, m9: I, m10: J, m11: K, m12: L, m13: M, m14: N, m15: O, m16: P, m17: Q, m18: R, m19: S, m20: T, m21: U, m22: V, m23: W, m24: X): TSuperClass & ReturnType<A> & ReturnType<B> & ReturnType<C> & ReturnType<D> & ReturnType<E> & ReturnType<F> & ReturnType<G> & ReturnType<H> & ReturnType<I> & ReturnType<J> & ReturnType<K> & ReturnType<L> & ReturnType<M> & ReturnType<N> & ReturnType<O> & ReturnType<P> & ReturnType<Q> & ReturnType<R> & ReturnType<S> & ReturnType<T> & ReturnType<U> & ReturnType<V> & ReturnType<W> & ReturnType<X>;
-    with<A extends Function, B extends Function, C extends Function, D extends Function, E extends Function, F extends Function, G extends Function, H extends Function, I extends Function, J extends Function, K extends Function, L extends Function, M extends Function, N extends Function, O extends Function, P extends Function, Q extends Function, R extends Function, S extends Function, T extends Function, U extends Function, V extends Function, W extends Function, X extends Function, Y extends Function>(m1: A, m2: B, m3: C, m4: D, m5: E, m6: F, m7: G, m8: H, m9: I, m10: J, m11: K, m12: L, m13: M, m14: N, m15: O, m16: P, m17: Q, m18: R, m19: S, m20: T, m21: U, m22: V, m23: W, m24: X, m25: Y): TSuperClass & ReturnType<A> & ReturnType<B> & ReturnType<C> & ReturnType<D> & ReturnType<E> & ReturnType<F> & ReturnType<G> & ReturnType<H> & ReturnType<I> & ReturnType<J> & ReturnType<K> & ReturnType<L> & ReturnType<M> & ReturnType<N> & ReturnType<O> & ReturnType<P> & ReturnType<Q> & ReturnType<R> & ReturnType<S> & ReturnType<T> & ReturnType<U> & ReturnType<V> & ReturnType<W> & ReturnType<X> & ReturnType<Y>;
-}
-export declare const configure: <T extends Function<any>>(mixin: T, ...args: MixinParameters<T>) => T;
-export declare const mix: <T extends Constructor<any>>(superClass: T) => MixinBuilder<T>;
+export declare const mix: <T extends Constructor<{}>>(superclass: T) => MixinBuilder<T>;
 export {};

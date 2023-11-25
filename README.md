@@ -1,103 +1,59 @@
 # TypeScript Mixin library
 
-## Example
+## Examples
+
+### Basic usage
 
 ```typescript
-// -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
-// <TIMESTAMP>
-// -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+class Base {}
 
-const timestamp = <T extends Constructor>(superclass: T, config = {}) => {
-  class Timestamp extends superclass {
-    private _timestamp: number
-    
-    constructor (...args: any[]) {
-      super(...args)
-      this._timestamp = Date.now()
-    }
+const NameMixin = Mixin(<T extends Constructor>(superclass: T) => class extends superclass { name = "Node" })
 
-    get timestamp() {
-      return this._timestamp
-    }
+const IdMixin = Mixin(<T extends Constructor>(superclass: T) => class extends superclass { id = nanoid() })
 
-    set timestamp(timestamp: number) {
-      this._timestamp = timestamp
-    }
-  }
-  return Timestamp
-}
+class MyClass extends mix(Base).with(NameMixin, IdMixin) {}
 
-const TimestampMixin = Mixin(timestamp)
-
-interface TimestampInterface extends Mixin<typeof TimestampMixin> {}
-
-// -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
-// <CONFIGURE>
-// -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
-
-const configurable = <T extends Constructor>(superclass: T, config: Record<string, any> = {}) => {
-  class Configure extends superclass {
-    configure (localConf: Record<string, any> = {}) {
-      const combined = {...config, ...localConf}
-      for (let key in combined) {
-        if (Object.getOwnPropertyDescriptor(this, key) || this[key]) {
-          this[key] = combined[key]
-        }
-      }
-    }
-  }
-  return Configure
-}
-
-const ConfigureMixin = Mixin(configurable)
-
-interface ConfigureInterface extends Mixin<typeof ConfigureMixin> {}
-
-interface CommentInterface extends TimestampInterface, ConfigureInterface {}
-
-class Comment extends mix(class {}).with(configure(ConfigureMixin, { message: 'Some comment' }), TimestampMixin) implements CommentInterface {
-  constructor (public message: string = '') {
-    super()
-  }
-}
-
-const comment = new Comment()
-
-if (comment instanceof ConfigureMixin) {
-  comment.configure({ timestamp: 0 })
-}
-
-if (comment instanceof TimestampMixin) {
-  console.log(comment.timestamp)
-}
+console.log(new MyClass()) // MyClass { name: 'Node', id: '2FHGySBlhFAMRwkiMiU9D' }
 ```
 
-## Install the dependencies
+### Instance of
+```typescript
+if (myClass instanceof SomeMixin) doSomething()
+```
+
+### Types
+```typescript
+type NameMixinType = MixinType<typeof NameMixin>
+type IdMixinType = MixinType<typeof IdMixin>
+
+type UserType = NameMixinType & IdMixinType
+
+class User extends mix(Base).with(NameMixin, IdMixin) implements UserType {}
+```
+
+## Development
+
+### Install the dependencies
 ```bash
 npm install
 ```
 
-## Start the app in development mode
+### Start the app in development mode
 ```bash
 npm start
 ```
 
-## Run tests
+### Run tests
 ```bash
 npm t
 ```
 
-## Run tests in watch mode
+### Run tests in watch mode
 ```bash
 npm run test:watch
 ```
 
-## Generate bundles and typings, create docs
+### Generate bundles and typings, create docs
 ```bash
 npm run build
-```
-
-## Commit using conventional commit style (husky will tell you to use it if you haven't wink)
-```bash
-npm run commit
 ```
