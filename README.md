@@ -35,25 +35,25 @@ class User extends mix(Base).with(NameMixin, IdMixin) implements UserType {}
 
 ### Install the dependencies
 ```bash
-npm install
+yarn install
 ```
 
 ### Start the app in development mode
 ```bash
-npm start
+yarn start
 ```
 
 ### Run tests
 ```bash
-npm t
+yarn t
 ```
 
 ### Run tests in watch mode
 ```bash
-npm run test:watch
+yarn test:watch
 ```
 
 ### Generate bundles and typings, create docs
 ```bash
-npm run build
+yarn build
 ```
