@@ -45,7 +45,7 @@ yarn start
 
 ### Run tests
 ```bash
-yarn t
+yarn test
 ```
 
 ### Run tests in watch mode
